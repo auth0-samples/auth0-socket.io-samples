@@ -7,4 +7,4 @@ body { font: 13px Helvetica, Arial; }
 #messages li { padding: 5px 10px; }
 #messages li:nth-child(odd) { background: #eee; }
 #login { width: 100%; padding: 10px }
-#login button { width: 10%; padding: 8px; border: none; background: rgb(130, 255, 130);}
+#login button { width: 10%; padding: 8px; border: none; background: #16214d; color: white;}
