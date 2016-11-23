@@ -1,50 +1,69 @@
 extends layout
 
 block content
-    script(src="https://cdn.auth0.com/js/lock-9.2.min.js")
+    script(src="http://cdn.auth0.com/js/lock/10.6/lock.min.js")
     script(src="/socket.io/socket.io.js")
-    script(src="http://code.jquery.com/jquery-1.12.4.js")
+    script(src="https://code.jquery.com/jquery-3.1.1.js")
 
 
     div#login
         button.btn Login
-    div#chat
-        ul#messages
-            form(action="")
-                input(id="m" autocomplete="off")
-                button.btn Send
+    #logged(style='display: none;')
+        h4 You are logged in
+        h3 Profile:
+        img#avatar(alt='')
+        p
+            strong Name: 
+            span#name
+        p
+            strong Email: 
+            span#email
+        p
+            strong Nickname: 
+            span#nickname
+        a#logout(href='#') Logout
 
     script.
         var userProfile;
         var userToken;
+        var id_token = localStorage.getItem('id_token');
         var lock = new Auth0Lock('#{env.AUTH0_CLIENT_ID}', '#{env.AUTH0_DOMAIN}');
-        var hash = lock.parseHash();
-        $('#chat').hide();
         $('#login button').click(function (e) {
             e.preventDefault();
             lock.show();
         });
 
-        if (hash) {
-            if (hash.error) {
-                console.log("There was an error logging in", hash.error);
-            }
-            else {
-                lock.getProfile(hash.id_token, function (err, profile) {
-                    if (err) {
-                        console.log('Cannot get user', err);
-                        return;
-                    }
-                    console.log('connected and authenticated');
-                    userProfile = profile;
-                    localStorage.setItem('userToken', hash.id_token);
-                    userToken = hash.id_token;
-                    openChat();
-                });
-            }
+        $('#logout').click(function(e) {
+            e.preventDefault();
+            localStorage.removeItem('id_token');
+            $('#login').show();
+            $('#logged').hide();
+            $('#name').empty();
+            $('#email').empty();
+            $('#nickname').empty();
+        });
+
+        if(id_token)
+            getProfile(id_token);
+
+        lock.on("authenticated", function(authResult) {
+            getProfile(authResult.idToken);
+        });
+        function getProfile(idToken) {
+            lock.getProfile(idToken, function (err, profile) {
+                if (err) {
+                    console.log('Cannot get user', err);
+                    return;
+                }
+                console.log('connected and authenticated');
+                userProfile = profile;
+                localStorage.setItem('id_token', idToken);
+                userToken = idToken;
+                showProfile();
+            });
         }
 
-        function openChat() {
+        function showProfile() {
             var socket = io();
             socket
                 .on('connect', function (msg) {
@@ -54,19 +73,13 @@ block content
                 .on('authenticated', function () {
                     //Do
                     $('#login').hide();
-                    $('#chat').show();
-                    $('form').submit(function (event) {
-                        socket.emit('chat message', $('#m').val());
-                        $('#m').val('');
-                        return false;
-                    });
+                    $('#logged').show();
+                    $('#name').text(userProfile.name);
+                    $('#email').text(userProfile.email);
+                    $('#nickname').text(userProfile.nickname);
                 })
                 .on('unauthorized', function(msg){
                     console.log("unauthorized: " + JSON.stringify(msg.data));
                     throw new Error(msg.data.type);
-                })
-                .on('chat message', function (msg) {
-                    console.log("msg");
-                    $('#messages').append($('<li>').text(msg));
                 });
         };
