@@ -1,7 +1,7 @@
 extends layout
 
 block content
-    script(src="http://cdn.auth0.com/js/lock/10.6/lock.min.js")
+    script(src="http://cdn.auth0.com/js/lock/10.13/lock.min.js")
     script(src="/socket.io/socket.io.js")
     script(src="https://code.jquery.com/jquery-3.1.1.js")
 
@@ -27,6 +27,7 @@ block content
         var userProfile;
         var userToken;
         var id_token = localStorage.getItem('id_token');
+        var access_token = localStorage.getItem('access_token');
         var lock = new Auth0Lock('#{env.AUTH0_CLIENT_ID}', '#{env.AUTH0_DOMAIN}');
         $('#login button').click(function (e) {
             e.preventDefault();
@@ -36,6 +37,7 @@ block content
         $('#logout').click(function(e) {
             e.preventDefault();
             localStorage.removeItem('id_token');
+            localStorage.removeItem('access_token');
             $('#login').show();
             $('#logged').hide();
             $('#name').empty();
@@ -43,14 +45,14 @@ block content
             $('#nickname').empty();
         });
 
-        if(id_token)
-            getProfile(id_token);
+        if(id_token && access_token)
+            getProfile(id_token, access_token);
 
         lock.on("authenticated", function(authResult) {
-            getProfile(authResult.idToken);
+            getProfile(authResult.idToken, authResult.accessToken);
         });
-        function getProfile(idToken) {
-            lock.getProfile(idToken, function (err, profile) {
+        function getProfile(idToken, accessToken) {
+            lock.getUserInfo(accessToken, function (err, profile) {
                 if (err) {
                     console.log('Cannot get user', err);
                     return;
@@ -58,6 +60,7 @@ block content
                 console.log('connected and authenticated');
                 userProfile = profile;
                 localStorage.setItem('id_token', idToken);
+                localStorage.setItem('access_token', accessToken);
                 userToken = idToken;
                 showProfile();
             });
